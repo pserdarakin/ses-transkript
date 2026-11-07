@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ses Transkript</title>
+<style>
+  :root {
+    --bg: #f7f7f8;
+    --card: #ffffff;
+    --text: #1d1d1f;
+    --muted: #6b6b73;
+    --border: #e3e3e8;
+    --accent: #7c3aed;
+    --accent-soft: #f3edff;
+    --error: #c62828;
+    --ok: #2e7d32;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141416;
+      --card: #1e1e21;
+      --text: #ececf0;
+      --muted: #9a9aa3;
+      --border: #303036;
+      --accent: #a78bfa;
+      --accent-soft: #2a2340;
+      --error: #ef5350;
+      --ok: #66bb6a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 720px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  input[type=password], input[type=text], select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+  }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  @media (max-width: 480px) { .row { grid-template-columns: 1fr; } }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .hint a { color: var(--accent); }
+  .drop {
+    border: 2px dashed var(--border);
+    border-radius: 14px;
+    padding: 32px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  .drop:hover, .drop.drag { border-color: var(--accent); background: var(--accent-soft); }
+  .drop strong { display: block; margin-bottom: 4px; }
+  .drop span { color: var(--muted); font-size: 13px; }
+  button {
+    font: inherit;
+    border: 0;
+    border-radius: 10px;
+    padding: 10px 16px;
+    cursor: pointer;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 600;
+  }
+  button.secondary { background: transparent; color: var(--text); border: 1px solid var(--border); font-weight: 500; padding: 6px 12px; font-size: 13px; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .actions { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+  .actions .primary { flex: 1; }
+  .file { border-top: 1px solid var(--border); padding-top: 12px; margin-top: 12px; }
+  .file:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
+  .file-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .file-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .status { font-size: 13px; color: var(--muted); white-space: nowrap; }
+  .status.error { color: var(--error); }
+  .status.done { color: var(--ok); }
+  textarea {
+    width: 100%;
+    min-height: 140px;
+    margin-top: 8px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+    resize: vertical;
+  }
+  .file-actions { display: flex; gap: 8px; margin-top: 8px; }
+  .x { background: none; color: var(--muted); padding: 0 4px; font-size: 18px; font-weight: 400; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Ses Transkript</h1>
+  <p class="sub">Ses dosyalarını Groq Whisper ile metne dönüştürün.</p>
+
+  <div class="card">
+    <label for="key">Groq API anahtarı</label>
+    <input id="key" type="password" placeholder="gsk_..." autocomplete="off">
+    <p class="hint">Ücretsiz anahtar: <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com/keys</a>. Anahtar sadece bu tarayıcıda saklanır.</p>
+    <div class="row">
+      <div>
+        <label for="lang">Dil</label>
+        <select id="lang">
+          <option value="tr">Türkçe</option>
+          <option value="en">English</option>
+          <option value="">Otomatik algıla</option>
+        </select>
+      </div>
+      <div>
+        <label for="model">Model</label>
+        <select id="model">
+          <option value="whisper-large-v3">whisper-large-v3 (en doğru)</option>
+          <option value="whisper-large-v3-turbo">whisper-large-v3-turbo (daha hızlı)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="drop" id="drop">
+      <input id="files" type="file" accept="audio/*,video/mp4,.mp3,.m4a,.wav,.webm,.ogg,.flac,.mp4" multiple hidden>
+      <strong>Ses dosyalarını seçin veya buraya sürükleyin</strong>
+      <span>mp3, m4a, wav, webm, ogg, flac, mp4 · dosya başına en fazla 25 MB</span>
+    </div>
+    <div class="actions">
+      <button class="primary" id="go" disabled>Transkript oluştur</button>
+      <button class="secondary" id="all" hidden>Hepsini indir (.txt)</button>
+    </div>
+  </div>
+
+  <div class="card" id="list" hidden></div>
+</main>
+
+<script>
+  const MAX_MB = 25
+  const $ = (id) => document.getElementById(id)
+  const keyInput = $('key'), langSel = $('lang'), modelSel = $('model')
+  const drop = $('drop'), fileInput = $('files'), goBtn = $('go'), allBtn = $('all'), list = $('list')
+
+  /** @type {{file: File, status: string, text: string, error: string, el: HTMLElement}[]} */
+  let items = []
+  let busy = false
+
+  // ── Settings persistence (per-browser only) ─────────────────────────────────
+  function load(k) { try { return localStorage.getItem(k) } catch { return null } }
+  function save(k, v) { try { localStorage.setItem(k, v) } catch {} }
+
+  keyInput.value = load('groqKey') || ''
+  langSel.value = load('lang') ?? 'tr'
+  modelSel.value = load('model') || 'whisper-large-v3'
+  keyInput.addEventListener('input', () => { save('groqKey', keyInput.value.trim()); refresh() })
+  langSel.addEventListener('change', () => save('lang', langSel.value))
+  modelSel.addEventListener('change', () => save('model', modelSel.value))
+
+  // ── File picking ────────────────────────────────────────────────────────────
+  drop.addEventListener('click', () => fileInput.click())
+  drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('drag') })
+  drop.addEventListener('dragleave', () => drop.classList.remove('drag'))
+  drop.addEventListener('drop', (e) => {
+    e.preventDefault()
+    drop.classList.remove('drag')
+    addFiles(e.dataTransfer.files)
+  })
+  fileInput.addEventListener('change', () => { addFiles(fileInput.files); fileInput.value = '' })
+
+  function addFiles(fileList) {
+    for (const file of fileList) {
+      const mb = file.size / 1024 / 1024
+      const tooBig = mb > MAX_MB
+      items.push({
+        file,
+        status: tooBig ? 'error' : 'waiting',
+        text: '',
+        error: tooBig ? `Çok büyük (${mb.toFixed(1)} MB, sınır ${MAX_MB} MB)` : '',
+        el: null,
+      })
+    }
+    render()
+  }
+
+  // ── Rendering ───────────────────────────────────────────────────────────────
+  const STATUS_LABEL = { waiting: 'Bekliyor', working: 'Çevriliyor…', done: 'Tamamlandı', error: 'Hata' }
+
+  function render() {
+    list.hidden = items.length === 0
+    list.innerHTML = ''
+    items.forEach((item, i) => {
+      const el = document.createElement('div')
+      el.className = 'file'
+      const statusText = item.status === 'error' ? item.error : STATUS_LABEL[item.status]
+      el.innerHTML = `
+        <div class="file-head">
+          <span class="file-name"></span>
+          <span>
+            <span class="status ${item.status}"></span>
+            ${busy ? '' : '<button class="x" title="Kaldır">×</button>'}
+          </span>
+        </div>`
+      el.querySelector('.file-name').textContent = item.file.name
+      el.querySelector('.status').textContent = statusText
+      el.querySelector('.x')?.addEventListener('click', () => { items.splice(i, 1); render() })
+
+      if (item.status === 'done') {
+        const ta = document.createElement('textarea')
+        ta.value = item.text
+        ta.addEventListener('input', () => { item.text = ta.value })
+        const actions = document.createElement('div')
+        actions.className = 'file-actions'
+        const copy = button('Kopyala', async () => {
+          await navigator.clipboard.writeText(item.text)
+          copy.textContent = 'Kopyalandı ✓'
+          setTimeout(() => (copy.textContent = 'Kopyala'), 1500)
+        })
+        actions.append(copy, button('İndir (.txt)', () => download(baseName(item.file.name) + '.txt', item.text)))
+        el.append(ta, actions)
+      }
+      item.el = el
+      list.append(el)
+    })
+    refresh()
+  }
+
+  function button(label, onClick) {
+    const b = document.createElement('button')
+    b.className = 'secondary'
+    b.textContent = label
+    b.addEventListener('click', onClick)
+    return b
+  }
+
+  function refresh() {
+    const pending = items.some((it) => it.status === 'waiting')
+    goBtn.disabled = busy || !pending || !keyInput.value.trim()
+    goBtn.textContent = busy ? 'Çevriliyor…' : 'Transkript oluştur'
+    allBtn.hidden = items.filter((it) => it.status === 'done').length < 2
+  }
+
+  // ── Transcription ───────────────────────────────────────────────────────────
+  goBtn.addEventListener('click', async () => {
+    busy = true
+    render()
+    for (const item of items) {
+      if (item.status !== 'waiting') continue
+      item.status = 'working'
+      render()
+      try {
+        item.text = await transcribe(item.file)
+        item.status = 'done'
+      } catch (err) {
+        item.status = 'error'
+        item.error = err.message
+      }
+      render()
+    }
+    busy = false
+    render()
+  })
+
+  async function transcribe(file) {
+    const form = new FormData()
+    form.append('file', file)
+    form.append('model', modelSel.value)
+    form.append('response_format', 'text')
+    if (langSel.value) form.append('language', langSel.value)
+
+    const res = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${keyInput.value.trim()}` },
+      body: form,
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => null)
+      if (res.status === 401) throw new Error('API anahtarı geçersiz')
+      throw new Error(data?.error?.message || `İstek başarısız (${res.status})`)
+    }
+    return (await res.text()).trim()
+  }
+
+  // ── Downloads ───────────────────────────────────────────────────────────────
+  allBtn.addEventListener('click', () => {
+    const done = items.filter((it) => it.status === 'done')
+    const body = done.map((it) => `=== ${it.file.name} ===\n\n${it.text}`).join('\n\n\n')
+    download('transkriptler.txt', body)
+  })
+
+  function baseName(name) { return name.replace(/\.[^.]+$/, '') }
+
+  function download(filename, text) {
+    const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }))
+    const a = Object.assign(document.createElement('a'), { href: url, download: filename })
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+</script>
+</body>
+</html>
